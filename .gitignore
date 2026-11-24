@@ -1,8 +1,27 @@
+# Dependencies
 node_modules/
+
+# Build outputs
 build/
 dist/
+server.js
+
+# Runtime data (contains operational records — do not commit)
+data/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Logs & coverage
+*.log
+npm-debug.log*
 coverage/
 .DS_Store
-*.log
-.env*
-!.env.example
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+*.swo
