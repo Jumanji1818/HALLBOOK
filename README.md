@@ -32,7 +32,8 @@ Built for **Exclusive Serene Hotel** (Wuye, Abuja) and designed to be adapted fo
 | Auth        | Custom (scrypt + signed cookies)    |
 | Runtime     | Node.js 20+ recommended             |
 
-> **Note**: The current data store is a single JSON file. Suitable for single-machine / low-concurrency use. For production multi-user environments, migrate to SQLite or PostgreSQL.
+> **Note**: The current data store is a single JSON file. Suitable for single-machine / low-concurrency use.  
+> **MySQL migration is planned** (when the production server/laptop is available). See `DEPLOYMENT.md` for how to run the app on a server today.
 
 ---
 
@@ -123,6 +124,7 @@ Permissions are enforced both in the API and in the UI.
 │   ├── types.ts           # Shared TypeScript types
 │   └── utils/             # Formatting & permission helpers
 ├── data/                  # Created at runtime (JSON database)
+├── DEPLOYMENT.md          # How to run on a server / office machine
 ├── .env.example
 └── package.json
 ```
@@ -139,12 +141,23 @@ Permissions are enforced both in the API and in the UI.
 
 ### Recommended next steps for production
 
-1. Replace the JSON file store with SQLite or PostgreSQL
-2. Add automated backups
-3. Pin exact dependency versions and document the Node version
-4. Add basic automated tests for critical booking & payment flows
-5. Split `server.ts` and the largest React components for maintainability
-6. Configure proper production cookie settings and HTTPS
+1. **Deploy using the guide in `DEPLOYMENT.md`**
+2. Replace the JSON file store with **MySQL** (planned)
+3. Set up automated daily backups of the data
+4. Add basic automated tests for booking + payment flows
+5. Split `server.ts` and the largest React components for easier maintenance
+
+---
+
+## Deployment
+
+See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for:
+
+- Running on a local office computer / network
+- Deploying to a VPS or cloud host
+- HTTPS + Nginx setup
+- Phone access instructions
+- PM2 process management
 
 ---
 
