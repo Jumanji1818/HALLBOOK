@@ -1,0 +1,6 @@
+{
+  "name": "HallBook — Hotel Hall & Event Operations",
+  "description": "Staff-only hotel hall booking, room block verification, catering coordination, payment ledger, guest check-in, and financial reporting platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

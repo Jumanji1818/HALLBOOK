@@ -1,0 +1,853 @@
+import type {
+  AddonItem,
+  AuditLogEntry,
+  Booking,
+  CashierShift,
+  CateringPackage,
+  Client,
+  EquipmentItem,
+  Hall,
+  HotelProfile,
+  MaintenanceBlock,
+  PaymentRecord,
+  RefundVoucher,
+  StaffTask,
+  StaffUser,
+  SystemErrorRecord,
+  WaitlistEntry,
+} from '../types.ts';
+
+export interface ServerStaffRecord extends StaffUser {
+  passwordHash: string | null;
+  approvalStatus: 'approved' | 'pending' | 'rejected';
+  approvedBy: string | null;
+  approvedAt: string | null;
+  locked: boolean;
+  lockedReason: string | null;
+  lockedAt: string | null;
+  failedAttempts: number;
+}
+
+export interface PasswordResetToken {
+  username: string;
+  codeHash: string;
+  expiresAt: string;
+}
+
+export interface HallBookDatabase {
+  initializedPasscode: boolean;
+  turnaroundDefaultApplied?: boolean;
+  nairaCurrencyApplied?: boolean;
+  recoveryKeyHash: string | null;
+  resetTokens: PasswordResetToken[];
+  receiptCounter: number;
+  voucherCounter: number;
+  bookingCounter: number;
+  profile: HotelProfile;
+  halls: Hall[];
+  equipment: EquipmentItem[];
+  cateringPackages: CateringPackage[];
+  addons: AddonItem[];
+  staff: ServerStaffRecord[];
+  clients: Client[];
+  bookings: Booking[];
+  payments: PaymentRecord[];
+  refunds: RefundVoucher[];
+  shifts: CashierShift[];
+  waitlist: WaitlistEntry[];
+  maintenanceBlocks: MaintenanceBlock[];
+  tasks: StaffTask[];
+  auditLogs: AuditLogEntry[];
+  systemErrors: SystemErrorRecord[];
+}
+
+export function createInitialDatabase(): HallBookDatabase {
+  const now = new Date();
+  const isoToday = now.toISOString().slice(0, 10);
+  const addDays = (days: number) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  };
+  const hoursFromNow = (h: number) => {
+    const d = new Date(now);
+    d.setHours(d.getHours() + h);
+    return d.toISOString();
+  };
+
+  const profile: HotelProfile = {
+    hotelName: 'Exclusive Serene Hotel',
+    tagline: 'Wuye, Abuja · Hospitality, Events & Banquet Operations',
+    address: 'Plot 31, Reuben Okoya Crescent, by Olusegun Obasanjo Way, Wuye, FCT Abuja',
+    phone: '+234 813 292 8544',
+    email: 'reservation@exclusiveserenehotel.com',
+    currency: 'NGN',
+    taxRatePercent: 7.5,
+    defaultHoldHours: 48,
+    depositPercent: 50,
+    largeBookingDayThreshold: 3,
+    largeBookingRoomThreshold: 25,
+    twoManagerApprovalEnabled: false,
+    bankAccounts: [
+      {
+        id: 'bank-1',
+        bankName: 'Zenith Bank Plc',
+        accountName: 'Exclusive Serene Hotel Events & Banquets',
+        accountNumber: '1014-8920-44',
+        branch: 'Wuye Branch, FCT Abuja',
+      },
+      {
+        id: 'bank-2',
+        bankName: 'First Bank of Nigeria Ltd',
+        accountName: 'Exclusive Serene Hotel Holdings Ltd',
+        accountNumber: '2031-7742-19',
+        branch: 'Central Business District, Abuja',
+      },
+    ],
+    cancellationPolicy: [
+      { daysBefore: 30, refundPercent: 85, label: '30+ days prior (85% refundable)' },
+      { daysBefore: 14, refundPercent: 50, label: '14–29 days prior (50% refundable)' },
+      { daysBefore: 7, refundPercent: 25, label: '7–13 days prior (25% refundable)' },
+      { daysBefore: 0, refundPercent: 0, label: 'Under 7 days (Non-refundable)' },
+    ],
+    timeSlots: [
+      { id: 'slot-morning', label: 'Morning Session', startTime: '08:00', endTime: '14:00' },
+      { id: 'slot-afternoon', label: 'Evening Session', startTime: '16:00', endTime: '22:00' },
+      { id: 'slot-fullday', label: 'Full Day Access', startTime: '08:00', endTime: '22:00' },
+    ],
+  };
+
+  const halls: Hall[] = [
+    {
+      id: 'hall-ballroom',
+      name: 'Serene Grand Ballroom',
+      imageUrl: '/src/assets/images/hall_grand_ballroom_1795436657988.jpg',
+      description: 'Column-free luxury ballroom with crystal chandeliers, bridal green room, and dual acoustic partitions.',
+      capacityBanquet: 420,
+      capacityTheatre: 650,
+      capacityClassroom: 280,
+      capacityCocktail: 750,
+      baseDayRate: 1800000,
+      halfDayRate: 1100000,
+      bufferMinutes: 120,
+      layouts: ['Banquet', 'Theatre', 'Cocktail', 'Classroom'],
+      sections: ['Full Ballroom', 'East Wing', 'West Wing'],
+      active: true,
+    },
+    {
+      id: 'hall-conference',
+      name: 'Serene Conference Pavilion',
+      imageUrl: '/src/assets/images/hall_conference_pavilion_1795436660735.jpg',
+      description: 'Tiered acoustic auditorium built for conventions, church summits, and multi-day keynote assemblies.',
+      capacityBanquet: 300,
+      capacityTheatre: 850,
+      capacityClassroom: 400,
+      capacityCocktail: 600,
+      baseDayRate: 1450000,
+      halfDayRate: 900000,
+      bufferMinutes: 120,
+      layouts: ['Theatre', 'Classroom', 'Banquet'],
+      sections: ['Main Auditorium', 'Balcony Tier'],
+      active: true,
+    },
+    {
+      id: 'hall-garden',
+      name: 'Courtyard Glass Conservatory',
+      imageUrl: '/src/assets/images/hall_garden_marquee_1795436659404.jpg',
+      description: 'Sunlit glass conservatory opening onto manicured gardens for daytime wedding receptions and celebratory luncheons.',
+      capacityBanquet: 180,
+      capacityTheatre: 240,
+      capacityClassroom: 120,
+      capacityCocktail: 300,
+      baseDayRate: 950000,
+      halfDayRate: 600000,
+      bufferMinutes: 120,
+      layouts: ['Banquet', 'Cocktail', 'Theatre'],
+      sections: ['Conservatory', 'Garden Terrace'],
+      active: true,
+    },
+    {
+      id: 'hall-salon',
+      name: 'Travertine Executive Salon',
+      imageUrl: '/src/assets/images/hall_executive_salon_1795436659528.jpg',
+      description: 'Intimate private dining and boardroom suite suited for leadership retreats, VIP pre-dinners, and family ceremonies.',
+      capacityBanquet: 48,
+      capacityTheatre: 65,
+      capacityClassroom: 36,
+      capacityCocktail: 80,
+      baseDayRate: 450000,
+      halfDayRate: 280000,
+      bufferMinutes: 120,
+      layouts: ['Banquet', 'U-Shape', 'Classroom'],
+      sections: ['Private Salon'],
+      active: true,
+    },
+  ];
+
+  const equipment: EquipmentItem[] = [
+    { id: 'eq-led', name: '4K Modular LED Stage Wall (12ft)', category: 'Visual', totalStock: 2, unitRate: 250000, replacementCost: 4500000 },
+    { id: 'eq-pa', name: 'Line-Array PA & Digital Mixer', category: 'Audio', totalStock: 4, unitRate: 160000, replacementCost: 2200000 },
+    { id: 'eq-mic', name: 'Wireless Handheld / Lapel Mic Kit (4x)', category: 'Audio', totalStock: 8, unitRate: 55000, replacementCost: 480000 },
+    { id: 'eq-proj', name: '6000-Lumen Laser Projector + Screen', category: 'Visual', totalStock: 5, unitRate: 85000, replacementCost: 1350000 },
+    { id: 'eq-stage', name: 'Modular Stage Riser Platform (8x4ft)', category: 'Staging', totalStock: 16, unitRate: 30000, replacementCost: 260000 },
+    { id: 'eq-chiavari', name: 'Gold Chiavari Banquet Chairs (Set of 50)', category: 'Furniture', totalStock: 12, unitRate: 70000, replacementCost: 850000 },
+  ];
+
+  const cateringPackages: CateringPackage[] = [
+    {
+      id: 'cat-royal',
+      name: 'Sovereign 3-Course Plated Banquet',
+      category: 'Wedding & Gala',
+      pricePerHead: 28000,
+      description: 'Formal seated dinner service with welcome canapés, dual entrée choice, and artisan dessert course.',
+      courses: ['Herb-Roasted Tomato Velouté or Caesar Salad', 'Braised Beef Short Rib or Pan-Seared Sea Bass', 'Warm Chocolate Fondant & Espresso Service'],
+    },
+    {
+      id: 'cat-buffet',
+      name: 'Grand Heritage Buffet Feast',
+      category: 'Wedding & Social',
+      pricePerHead: 20000,
+      description: 'Live carving station, Nigerian & continental hot dishes, cold salad bar, and pastry display.',
+      courses: ['3 Artisanal Salads & Bread Display', 'Smoky Party Jollof, Grilled Croaker & Peppered Chicken', 'Assorted Petit Fours & Fresh Orchard Fruit'],
+    },
+    {
+      id: 'cat-summit',
+      name: 'Executive Summit Full-Day Package',
+      category: 'Conference & Church',
+      pricePerHead: 15000,
+      description: 'Morning coffee & pastries, plated or buffet working lunch, and afternoon hydration & snack break.',
+      courses: ['08:30 Coffee, Tea & Viennoiserie', '13:00 Hot Working Lunch Buffet', '16:00 Citrus Infusions & Savory Bites'],
+    },
+    {
+      id: 'cat-fellowship',
+      name: 'Fellowship Refreshment & Boxed Meal',
+      category: 'Church Program',
+      pricePerHead: 8500,
+      description: 'Efficient high-volume hot boxed meals and bottled beverages for large congregation programs.',
+      courses: ['Herb Chicken or Vegetable Rice Box', 'Warm Dinner Roll & Fruit Cup', 'Chilled Bottled Water & Juice'],
+    },
+  ];
+
+  const addons: AddonItem[] = [
+    { id: 'add-floral', name: 'Grand Floral Arch & Table Centerpieces', unitRate: 380000, unitLabel: 'package' },
+    { id: 'add-security', name: 'Dedicated Event Security Officers (Shift)', unitRate: 70000, unitLabel: 'officer' },
+    { id: 'add-valet', name: 'Valet Parking & Traffic Attendants', unitRate: 180000, unitLabel: 'event' },
+    { id: 'add-rehearsal', name: 'Early Setup / Rehearsal Access (2 hrs)', unitRate: 120000, unitLabel: 'block' },
+  ];
+
+  const staff: ServerStaffRecord[] = [
+    { id: 'stf-mgr', name: 'Evelyn Okafor', email: 'evelyn.okafor@exclusiveserenehotel.com', username: 'manager', role: 'manager', active: true, approvalStatus: 'approved', approvedBy: 'System', approvedAt: '2026-01-05T08:00:00Z', locked: false, lockedReason: null, lockedAt: null, failedAttempts: 0, createdAt: '2026-01-05T08:00:00Z', passwordHash: null },
+    { id: 'stf-off', name: 'Daniel Mensah', email: 'daniel.mensah@exclusiveserenehotel.com', username: 'officer', role: 'booking_officer', active: true, approvalStatus: 'approved', approvedBy: 'Evelyn Okafor', approvedAt: '2026-01-05T08:00:00Z', locked: false, lockedReason: null, lockedAt: null, failedAttempts: 0, createdAt: '2026-01-05T08:00:00Z', passwordHash: null },
+    { id: 'stf-csh', name: 'Priya Nair', email: 'priya.nair@exclusiveserenehotel.com', username: 'cashier', role: 'cashier', active: true, approvalStatus: 'approved', approvedBy: 'Evelyn Okafor', approvedAt: '2026-01-05T08:00:00Z', locked: false, lockedReason: null, lockedAt: null, failedAttempts: 0, createdAt: '2026-01-05T08:00:00Z', passwordHash: null },
+    { id: 'stf-fd', name: 'Lucas Vance', email: 'lucas.vance@exclusiveserenehotel.com', username: 'frontdesk', role: 'front_desk', active: true, approvalStatus: 'approved', approvedBy: 'Evelyn Okafor', approvedAt: '2026-01-05T08:00:00Z', locked: false, lockedReason: null, lockedAt: null, failedAttempts: 0, createdAt: '2026-01-05T08:00:00Z', passwordHash: null },
+    { id: 'stf-ops', name: 'Hannah Al-Mansoor', email: 'hannah.almansoor@exclusiveserenehotel.com', username: 'ops', role: 'operations', active: true, approvalStatus: 'approved', approvedBy: 'Evelyn Okafor', approvedAt: '2026-01-05T08:00:00Z', locked: false, lockedReason: null, lockedAt: null, failedAttempts: 0, createdAt: '2026-01-05T08:00:00Z', passwordHash: null },
+    { id: 'stf-own', name: 'Arthur Sterling', email: 'arthur.sterling@exclusiveserenehotel.com', username: 'owner', role: 'owner', active: true, approvalStatus: 'approved', approvedBy: 'Evelyn Okafor', approvedAt: '2026-01-05T08:00:00Z', locked: false, lockedReason: null, lockedAt: null, failedAttempts: 0, createdAt: '2026-01-05T08:00:00Z', passwordHash: null },
+    { id: 'stf-adm', name: 'Samuel Kalu', email: 'samuel.kalu@exclusiveserenehotel.com', username: 'admin', role: 'sys_admin', active: true, approvalStatus: 'approved', approvedBy: 'Evelyn Okafor', approvedAt: '2026-01-05T08:00:00Z', locked: false, lockedReason: null, lockedAt: null, failedAttempts: 0, createdAt: '2026-01-05T08:00:00Z', passwordHash: null },
+  ];
+
+  const clients: Client[] = [
+    {
+      id: 'cli-1',
+      name: 'Grace & Tunde Adeyemi',
+      phone: '+234-803-555-0142',
+      email: 'adeyemi.wedding@example.com',
+      organization: 'Adeyemi Family',
+      overdueFlag: false,
+      overdueNotes: '',
+      createdAt: '2026-10-12T10:15:00Z',
+    },
+    {
+      id: 'cli-2',
+      name: 'Pastor Miriam Brooks',
+      phone: '+234-809-555-0188',
+      email: 'admin@gracechapel.org',
+      organization: 'Grace Chapel International',
+      overdueFlag: false,
+      overdueNotes: '',
+      createdAt: '2026-10-20T14:30:00Z',
+    },
+    {
+      id: 'cli-3',
+      name: 'Dr. Chinedu Nwosu',
+      phone: '+234-805-555-0194',
+      email: 'events@medtechforum.org',
+      organization: 'Abuja MedTech Symposium',
+      overdueFlag: true,
+      overdueNotes: 'Previous AV damage balance unpaid for 12 days; manager clearance required for new bookings.',
+      createdAt: '2026-09-18T09:00:00Z',
+    },
+    {
+      id: 'cli-4',
+      name: 'Claire Beaumont',
+      phone: '+234-812-555-0167',
+      email: 'claire@beaumontgala.com',
+      organization: 'Beaumont Philanthropy Trust',
+      overdueFlag: false,
+      overdueNotes: '',
+      createdAt: '2026-11-01T11:45:00Z',
+    },
+  ];
+
+  const bookings: Booking[] = [
+    {
+      id: 'HB-2026-0101',
+      clientId: 'cli-1',
+      hallId: 'hall-ballroom',
+      eventTitle: 'Adeyemi – Cole Royal Wedding Reception',
+      eventType: 'Wedding',
+      bookingMode: 'single',
+      repeatRule: 'none',
+      sessions: [
+        {
+          id: 'ses-101-1',
+          date: addDays(2),
+          startTime: '14:00',
+          endTime: '22:00',
+          layout: 'Banquet',
+          expectedGuests: 320,
+          status: 'active',
+        },
+      ],
+      roomLines: [
+        {
+          id: 'rl-101-1',
+          roomType: 'Deluxe King Suite',
+          count: 15,
+          checkInDate: addDays(1),
+          checkOutDate: addDays(3),
+          ratePerNight: 85000,
+          verificationStatus: 'full',
+          verifiedCount: 15,
+          verifiedBy: 'Lucas Vance',
+          verifiedAt: '2026-11-15T11:20:00Z',
+          officerDecision: 'accepted',
+          frontDeskHotelRef: 'FD-BLK-8821',
+          allocationNotes: 'Floors 4–5 East Wing assigned together for bridal party.',
+        },
+      ],
+      equipment: [
+        { equipmentId: 'eq-pa', name: 'Line-Array PA & Digital Mixer', quantity: 1, unitRate: 160000, returnedQty: null, damagedQty: 0, damageFee: 0 },
+        { equipmentId: 'eq-mic', name: 'Wireless Handheld / Lapel Mic Kit (4x)', quantity: 2, unitRate: 55000, returnedQty: null, damagedQty: 0, damageFee: 0 },
+        { equipmentId: 'eq-chiavari', name: 'Gold Chiavari Banquet Chairs (Set of 50)', quantity: 7, unitRate: 70000, returnedQty: null, damagedQty: 0, damageFee: 0 },
+      ],
+      catering: {
+        mode: 'hotel',
+        packageId: 'cat-royal',
+        name: 'Sovereign 3-Course Plated Banquet',
+        guests: 320,
+        pricePerHead: 28000,
+        serviceTime: '18:30',
+        dietaryNotes: '18 Vegetarian, 6 Gluten-Free, strictly nut-free dessert prep.',
+        kitchenStatus: 'confirmed',
+      },
+      addons: [
+        { addonId: 'add-floral', name: 'Grand Floral Arch & Table Centerpieces', quantity: 1, unitRate: 380000 },
+        { addonId: 'add-valet', name: 'Valet Parking & Traffic Attendants', quantity: 1, unitRate: 180000 },
+      ],
+      guests: [
+        { id: 'gst-1', fullName: 'Chief Olusegun Adeyemi', groupTag: 'VIP', tableLabel: 'Head Table A', dietaryNote: 'Low sodium', phone: '+234-803-555-0101', checkedIn: false, checkedInAt: null },
+        { id: 'gst-2', fullName: 'Mrs. Folake Adeyemi', groupTag: 'Family', tableLabel: 'Head Table A', dietaryNote: '', phone: '+234-803-555-0102', checkedIn: false, checkedInAt: null },
+        { id: 'gst-3', fullName: 'Marcus & Elena Cole', groupTag: 'VIP', tableLabel: 'Table 01', dietaryNote: 'Vegetarian', phone: '+234-803-555-0103', checkedIn: false, checkedInAt: null },
+        { id: 'gst-4', fullName: 'DJ Kofi Soundworks', groupTag: 'Vendor', tableLabel: 'Crew Table', dietaryNote: '', phone: '+234-803-555-0104', checkedIn: false, checkedInAt: null },
+      ],
+      status: 'locked',
+      holdExpiresAt: null,
+      requiresManagerApproval: false,
+      managerApprovedBy: null,
+      managerApprovedAt: null,
+      discountAmount: 200000,
+      discountReason: 'Early full-ballroom wedding package courtesy',
+      extrasAmount: 0,
+      extrasNotes: '',
+      hallTotal: 1800000,
+      roomTotal: 2550000,
+      equipmentTotal: 760000,
+      cateringTotal: 8960000,
+      addonTotal: 560000,
+      taxAmount: 1082250,
+      grandTotal: 15512250,
+      depositRequired: 7756125,
+      finalDueDate: addDays(9),
+      createdBy: 'Daniel Mensah',
+      assignedOfficerId: 'stf-off',
+      createdAt: '2026-11-14T09:30:00Z',
+      updatedAt: '2026-11-16T15:00:00Z',
+      amendments: [],
+      cancellationReason: null,
+      suggestedRefund: 0,
+      eventNotes: 'Chandeliers dimmed to 40% during first dance; bridal entrance at 17:15.',
+      operationsBrief: 'Stage setup ready by 11:00 AM. Two wireless mics dedicated to MC at podium.',
+    },
+    {
+      id: 'HB-2026-0102',
+      clientId: 'cli-2',
+      hallId: 'hall-conference',
+      eventTitle: 'Grace Chapel Annual Faith & Leadership Convocation',
+      eventType: 'Church Program',
+      bookingMode: 'multi_day',
+      repeatRule: 'none',
+      sessions: [
+        { id: 'ses-102-1', date: addDays(5), startTime: '08:00', endTime: '22:00', layout: 'Theatre', expectedGuests: 780, status: 'active' },
+        { id: 'ses-102-2', date: addDays(6), startTime: '08:00', endTime: '22:00', layout: 'Theatre', expectedGuests: 800, status: 'active' },
+        { id: 'ses-102-3', date: addDays(7), startTime: '08:00', endTime: '22:00', layout: 'Theatre', expectedGuests: 820, status: 'active' },
+        { id: 'ses-102-4', date: addDays(8), startTime: '08:00', endTime: '17:00', layout: 'Theatre', expectedGuests: 750, status: 'active' },
+      ],
+      roomLines: [
+        {
+          id: 'rl-102-1',
+          roomType: 'Standard Twin Guest Room',
+          count: 30,
+          checkInDate: addDays(4),
+          checkOutDate: addDays(9),
+          ratePerNight: 55000,
+          verificationStatus: 'pending',
+          verifiedCount: 0,
+          verifiedBy: null,
+          verifiedAt: null,
+          officerDecision: 'pending',
+          frontDeskHotelRef: '',
+          allocationNotes: '',
+        },
+      ],
+      equipment: [
+        { equipmentId: 'eq-led', name: '4K Modular LED Stage Wall (12ft)', quantity: 1, unitRate: 250000, returnedQty: null, damagedQty: 0, damageFee: 0 },
+        { equipmentId: 'eq-pa', name: 'Line-Array PA & Digital Mixer', quantity: 1, unitRate: 160000, returnedQty: null, damagedQty: 0, damageFee: 0 },
+        { equipmentId: 'eq-stage', name: 'Modular Stage Riser Platform (8x4ft)', quantity: 6, unitRate: 30000, returnedQty: null, damagedQty: 0, damageFee: 0 },
+      ],
+      catering: {
+        mode: 'hotel',
+        packageId: 'cat-fellowship',
+        name: 'Fellowship Refreshment & Boxed Meal',
+        guests: 780,
+        pricePerHead: 8500,
+        serviceTime: '13:00',
+        dietaryNotes: 'No pork; 45 vegetarian boxes per day.',
+        kitchenStatus: 'planned',
+      },
+      addons: [
+        { addonId: 'add-security', name: 'Dedicated Event Security Officers (Shift)', quantity: 4, unitRate: 70000 },
+      ],
+      guests: [
+        { id: 'gst-201', fullName: 'Bishop Nathaniel Brooks', groupTag: 'Speaker', tableLabel: 'Stage Front', dietaryNote: '', phone: '+234-809-555-0211', checkedIn: false, checkedInAt: null },
+        { id: 'gst-202', fullName: 'Choir Director Lydia Grant', groupTag: 'VIP', tableLabel: 'Row A-1', dietaryNote: 'Dairy-free', phone: '+234-809-555-0212', checkedIn: false, checkedInAt: null },
+      ],
+      status: 'awaiting_room_verification',
+      holdExpiresAt: hoursFromNow(36),
+      requiresManagerApproval: true,
+      managerApprovedBy: null,
+      managerApprovedAt: null,
+      discountAmount: 0,
+      discountReason: '',
+      extrasAmount: 0,
+      extrasNotes: '',
+      hallTotal: 5800000,
+      roomTotal: 8250000,
+      equipmentTotal: 590000,
+      cateringTotal: 6630000,
+      addonTotal: 280000,
+      taxAmount: 1616250,
+      grandTotal: 23166250,
+      depositRequired: 11583125,
+      finalDueDate: addDays(15),
+      createdBy: 'Daniel Mensah',
+      assignedOfficerId: 'stf-off',
+      createdAt: '2026-11-22T10:00:00Z',
+      updatedAt: '2026-11-22T10:00:00Z',
+      amendments: [],
+      cancellationReason: null,
+      suggestedRefund: 0,
+      eventNotes: 'Exceeds 3-day threshold and 25-room block threshold — awaits room check & manager approval.',
+      operationsBrief: 'Choir riser layout on stage left; livestream feed patch from AV booth.',
+    },
+    {
+      id: 'HB-2026-0103',
+      clientId: 'cli-4',
+      hallId: 'hall-garden',
+      eventTitle: 'Beaumont Autumn Charity Luncheon',
+      eventType: 'Social Gala',
+      bookingMode: 'single',
+      repeatRule: 'none',
+      sessions: [
+        { id: 'ses-103-1', date: addDays(0), startTime: '08:00', endTime: '13:00', layout: 'Banquet', expectedGuests: 140, status: 'active' },
+      ],
+      roomLines: [],
+      equipment: [
+        { equipmentId: 'eq-mic', name: 'Wireless Handheld / Lapel Mic Kit (4x)', quantity: 1, unitRate: 55000, returnedQty: null, damagedQty: 0, damageFee: 0 },
+        { equipmentId: 'eq-proj', name: '6000-Lumen Laser Projector + Screen', quantity: 1, unitRate: 85000, returnedQty: null, damagedQty: 0, damageFee: 0 },
+      ],
+      catering: {
+        mode: 'hotel',
+        packageId: 'cat-buffet',
+        name: 'Grand Heritage Buffet Feast',
+        guests: 140,
+        pricePerHead: 20000,
+        serviceTime: '11:30',
+        dietaryNotes: 'Gluten-free bread rolls at carving station.',
+        kitchenStatus: 'in_prep',
+      },
+      addons: [
+        { addonId: 'add-floral', name: 'Grand Floral Arch & Table Centerpieces', quantity: 1, unitRate: 380000 },
+      ],
+      guests: [
+        { id: 'gst-301', fullName: 'Claire Beaumont', groupTag: 'VIP', tableLabel: 'Table 1', dietaryNote: '', phone: '+234-812-555-0167', checkedIn: true, checkedInAt: '2026-11-23T08:15:00Z' },
+        { id: 'gst-302', fullName: 'Hon. Patricia Wright', groupTag: 'Speaker', tableLabel: 'Table 1', dietaryNote: 'Pescatarian', phone: '+234-812-555-0399', checkedIn: true, checkedInAt: '2026-11-23T08:28:00Z' },
+        { id: 'gst-303', fullName: 'David Chen', groupTag: 'General', tableLabel: 'Table 4', dietaryNote: '', phone: '+234-812-555-0340', checkedIn: false, checkedInAt: null },
+      ],
+      status: 'locked',
+      holdExpiresAt: null,
+      requiresManagerApproval: false,
+      managerApprovedBy: null,
+      managerApprovedAt: null,
+      discountAmount: 0,
+      discountReason: '',
+      extrasAmount: 0,
+      extrasNotes: '',
+      hallTotal: 600000,
+      roomTotal: 0,
+      equipmentTotal: 140000,
+      cateringTotal: 2800000,
+      addonTotal: 380000,
+      taxAmount: 294000,
+      grandTotal: 4214000,
+      depositRequired: 2107000,
+      finalDueDate: addDays(7),
+      createdBy: 'Daniel Mensah',
+      assignedOfficerId: 'stf-off',
+      createdAt: '2026-11-10T14:00:00Z',
+      updatedAt: '2026-11-18T11:00:00Z',
+      amendments: [],
+      cancellationReason: null,
+      suggestedRefund: 0,
+      eventNotes: 'Today’s morning charity luncheon. Terrace doors open at 10:30.',
+      operationsBrief: 'Projector test at 08:30 AM sharp.',
+    },
+    {
+      id: 'HB-2026-0104',
+      clientId: 'cli-3',
+      hallId: 'hall-salon',
+      eventTitle: 'MedTech Advisory Board Roundtable',
+      eventType: 'Corporate Conference',
+      bookingMode: 'single',
+      repeatRule: 'none',
+      sessions: [
+        { id: 'ses-104-1', date: addDays(-3), startTime: '08:00', endTime: '13:00', layout: 'U-Shape', expectedGuests: 28, status: 'completed' },
+      ],
+      roomLines: [],
+      equipment: [
+        { equipmentId: 'eq-proj', name: '6000-Lumen Laser Projector + Screen', quantity: 1, unitRate: 85000, returnedQty: 1, damagedQty: 0, damageFee: 0 },
+        { equipmentId: 'eq-mic', name: 'Wireless Handheld / Lapel Mic Kit (4x)', quantity: 1, unitRate: 55000, returnedQty: 0, damagedQty: 1, damageFee: 140000 },
+      ],
+      catering: {
+        mode: 'hotel',
+        packageId: 'cat-summit',
+        name: 'Executive Summit Full-Day Package',
+        guests: 28,
+        pricePerHead: 15000,
+        serviceTime: '12:00',
+        dietaryNotes: '4 Halal meals.',
+        kitchenStatus: 'served',
+      },
+      addons: [],
+      guests: [],
+      status: 'event_completed',
+      holdExpiresAt: null,
+      requiresManagerApproval: true,
+      managerApprovedBy: 'Evelyn Okafor',
+      managerApprovedAt: '2026-11-12T10:00:00Z',
+      discountAmount: 0,
+      discountReason: '',
+      extrasAmount: 140000,
+      extrasNotes: '1 wireless receiver damaged during teardown (₦140,000 replacement fee)',
+      hallTotal: 280000,
+      roomTotal: 0,
+      equipmentTotal: 140000,
+      cateringTotal: 420000,
+      addonTotal: 0,
+      taxAmount: 73500,
+      grandTotal: 1053500,
+      depositRequired: 526750,
+      finalDueDate: addDays(-1),
+      createdBy: 'Daniel Mensah',
+      assignedOfficerId: 'stf-off',
+      createdAt: '2026-11-02T09:00:00Z',
+      updatedAt: '2026-11-20T18:00:00Z',
+      amendments: [],
+      cancellationReason: null,
+      suggestedRefund: 0,
+      eventNotes: 'Event completed; final invoice due yesterday (overdue collection open).',
+      operationsBrief: 'U-shape seating for 28 executives.',
+    },
+    {
+      id: 'HB-2026-0105',
+      clientId: 'cli-2',
+      hallId: 'hall-salon',
+      eventTitle: 'Midweek Elders Prayer & Strategy Session',
+      eventType: 'Church Program',
+      bookingMode: 'recurring',
+      repeatRule: 'weekly',
+      sessions: [
+        { id: 'ses-105-1', date: addDays(3), startTime: '14:00', endTime: '18:00', layout: 'Classroom', expectedGuests: 34, status: 'active' },
+        { id: 'ses-105-2', date: addDays(10), startTime: '14:00', endTime: '18:00', layout: 'Classroom', expectedGuests: 34, status: 'active' },
+        { id: 'ses-105-3', date: addDays(17), startTime: '14:00', endTime: '18:00', layout: 'Classroom', expectedGuests: 34, status: 'active' },
+      ],
+      roomLines: [],
+      equipment: [
+        { equipmentId: 'eq-mic', name: 'Wireless Handheld / Lapel Mic Kit (4x)', quantity: 1, unitRate: 55000, returnedQty: null, damagedQty: 0, damageFee: 0 },
+      ],
+      catering: null,
+      addons: [],
+      guests: [],
+      status: 'hold_proforma',
+      holdExpiresAt: hoursFromNow(28),
+      requiresManagerApproval: false,
+      managerApprovedBy: null,
+      managerApprovedAt: null,
+      discountAmount: 0,
+      discountReason: '',
+      extrasAmount: 0,
+      extrasNotes: '',
+      hallTotal: 840000,
+      roomTotal: 0,
+      equipmentTotal: 55000,
+      cateringTotal: 0,
+      addonTotal: 0,
+      taxAmount: 67125,
+      grandTotal: 962125,
+      depositRequired: 481062.5,
+      finalDueDate: addDays(17),
+      createdBy: 'Daniel Mensah',
+      assignedOfficerId: 'stf-off',
+      createdAt: '2026-11-22T18:00:00Z',
+      updatedAt: '2026-11-22T18:00:00Z',
+      amendments: [],
+      cancellationReason: null,
+      suggestedRefund: 0,
+      eventNotes: 'Proforma sent; awaiting 50% deposit within 48-hour hold window.',
+      operationsBrief: 'Water dispensers and notepad packs on classroom desks.',
+    },
+  ];
+
+  const shifts: CashierShift[] = [
+    {
+      id: 'shf-001',
+      cashierId: 'stf-csh',
+      cashierName: 'Priya Nair',
+      openedAt: `${isoToday}T07:30:00Z`,
+      closedAt: null,
+      openingFloat: 200000,
+      declaredCash: null,
+      status: 'open',
+    },
+  ];
+
+  const payments: PaymentRecord[] = [
+    {
+      id: 'pay-1',
+      bookingId: 'HB-2026-0101',
+      amount: 8000000,
+      method: 'Bank Transfer',
+      reference: 'ZBNK-TRX-991042',
+      proofNote: 'Bank credit advice verified against corporate statement.',
+      recordedBy: 'Priya Nair',
+      recordedAt: '2026-11-16T14:30:00Z',
+      status: 'verified',
+      verifiedBy: 'Priya Nair',
+      verifiedAt: '2026-11-16T15:00:00Z',
+      receiptNumber: 'RCT-2026-0001',
+      reprintCount: 0,
+      voidedBy: null,
+      voidedAt: null,
+      voidReason: null,
+      shiftId: 'shf-001',
+      managerOverrideOverpayment: false,
+      overrideReason: null,
+    },
+    {
+      id: 'pay-2',
+      bookingId: 'HB-2026-0103',
+      amount: 2500000,
+      method: 'POS',
+      reference: 'POS-TERM2-4418',
+      proofNote: 'Merchant slip #4418 matched batch settlement.',
+      recordedBy: 'Priya Nair',
+      recordedAt: '2026-11-18T10:30:00Z',
+      status: 'verified',
+      verifiedBy: 'Priya Nair',
+      verifiedAt: '2026-11-18T11:00:00Z',
+      receiptNumber: 'RCT-2026-0002',
+      reprintCount: 0,
+      voidedBy: null,
+      voidedAt: null,
+      voidReason: null,
+      shiftId: 'shf-001',
+      managerOverrideOverpayment: false,
+      overrideReason: null,
+    },
+    {
+      id: 'pay-3',
+      bookingId: 'HB-2026-0104',
+      amount: 550000,
+      method: 'Bank Transfer',
+      reference: 'FBNK-TRX-882100',
+      proofNote: 'Deposit cleared prior to roundtable.',
+      recordedBy: 'Priya Nair',
+      recordedAt: '2026-11-13T12:00:00Z',
+      status: 'verified',
+      verifiedBy: 'Priya Nair',
+      verifiedAt: '2026-11-13T12:15:00Z',
+      receiptNumber: 'RCT-2026-0003',
+      reprintCount: 0,
+      voidedBy: null,
+      voidedAt: null,
+      voidReason: null,
+      shiftId: 'shf-001',
+      managerOverrideOverpayment: false,
+      overrideReason: null,
+    },
+    {
+      id: 'pay-4',
+      bookingId: 'HB-2026-0105',
+      amount: 500000,
+      method: 'Cash',
+      reference: 'CSH-COUNTER-09',
+      proofNote: 'Cash deposit handed at desk — awaiting Cashier verification.',
+      recordedBy: 'Priya Nair',
+      recordedAt: `${isoToday}T08:40:00Z`,
+      status: 'pending_verification',
+      verifiedBy: null,
+      verifiedAt: null,
+      receiptNumber: null,
+      reprintCount: 0,
+      voidedBy: null,
+      voidedAt: null,
+      voidReason: null,
+      shiftId: 'shf-001',
+      managerOverrideOverpayment: false,
+      overrideReason: null,
+    },
+  ];
+
+  const refunds: RefundVoucher[] = [];
+
+  const waitlist: WaitlistEntry[] = [
+    {
+      id: 'wl-1',
+      hallId: 'hall-ballroom',
+      desiredDate: addDays(2),
+      startTime: '14:00',
+      endTime: '22:00',
+      clientName: 'Victor & Nadia Alabi',
+      clientPhone: '+234-803-555-0277',
+      eventTitle: 'Alabi Silver Anniversary Gala',
+      status: 'waiting',
+      notifiedAt: null,
+      createdAt: '2026-11-17T16:10:00Z',
+    },
+  ];
+
+  const maintenanceBlocks: MaintenanceBlock[] = [
+    {
+      id: 'mnt-1',
+      hallId: 'hall-ballroom',
+      date: addDays(11),
+      startTime: '08:00',
+      endTime: '15:00',
+      reason: 'Annual chandelier rigging & hardwood floor buffing',
+      createdBy: 'Hannah Al-Mansoor',
+    },
+  ];
+
+  const tasks: StaffTask[] = [
+    {
+      id: 'tsk-1',
+      assignedToId: 'stf-fd',
+      roleTarget: 'front_desk',
+      bookingId: 'HB-2026-0102',
+      type: 'room_verification',
+      title: 'Verify 30 Standard Twin Rooms (Grace Chapel)',
+      description: 'Confirm availability for 5-night church convocation room block.',
+      status: 'open',
+      createdAt: '2026-11-22T10:05:00Z',
+    },
+    {
+      id: 'tsk-2',
+      assignedToId: 'stf-mgr',
+      roleTarget: 'manager',
+      bookingId: 'HB-2026-0102',
+      type: 'manager_approval',
+      title: 'Large Booking Approval Required (4 Days / 30 Rooms)',
+      description: 'Grace Chapel Convocation exceeds day & room thresholds.',
+      status: 'open',
+      createdAt: '2026-11-22T10:05:00Z',
+    },
+    {
+      id: 'tsk-3',
+      assignedToId: 'stf-csh',
+      roleTarget: 'cashier',
+      bookingId: 'HB-2026-0104',
+      type: 'overdue_collection',
+      title: 'Collect Overdue Balance — MedTech Advisory Roundtable',
+      description: 'Final invoice balance including ₦140,000 damaged mic fee is past due.',
+      status: 'open',
+      createdAt: '2026-11-22T08:00:00Z',
+    },
+  ];
+
+  const auditLogs: AuditLogEntry[] = [
+    {
+      id: 'aud-1',
+      timestamp: '2026-11-16T15:00:00Z',
+      actorId: 'stf-csh',
+      actorName: 'Priya Nair',
+      actorRole: 'cashier',
+      action: 'PAYMENT_VERIFIED_AND_BOOKING_LOCKED',
+      targetType: 'booking',
+      targetId: 'HB-2026-0101',
+      reason: 'Deposit threshold reached (50%+ verified)',
+      details: 'Issued receipt RCT-2026-0001 (₦8,000,000.00) and locked Serene Grand Ballroom.',
+      highImpact: false,
+    },
+    {
+      id: 'aud-2',
+      timestamp: '2026-11-20T18:00:00Z',
+      actorId: 'stf-ops',
+      actorName: 'Hannah Al-Mansoor',
+      actorRole: 'operations',
+      action: 'POST_EVENT_DAMAGE_RECORDED',
+      targetType: 'booking',
+      targetId: 'HB-2026-0104',
+      reason: 'Wireless mic receiver damaged at teardown',
+      details: 'Added ₦140,000.00 equipment replacement fee to final invoice.',
+      highImpact: true,
+    },
+  ];
+
+  const systemErrors: SystemErrorRecord[] = [];
+
+  return {
+    initializedPasscode: false,
+    turnaroundDefaultApplied: true,
+    nairaCurrencyApplied: true,
+    recoveryKeyHash: null,
+    resetTokens: [],
+    receiptCounter: 3,
+    voucherCounter: 0,
+    bookingCounter: 105,
+    profile,
+    halls,
+    equipment,
+    cateringPackages,
+    addons,
+    staff,
+    clients,
+    bookings,
+    payments,
+    refunds,
+    shifts,
+    waitlist,
+    maintenanceBlocks,
+    tasks,
+    auditLogs,
+    systemErrors,
+  };
+}
