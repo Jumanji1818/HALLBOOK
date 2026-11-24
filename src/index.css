@@ -81,3 +81,35 @@
     color: #000000 !important;
   }
 }
+
+/* Mobile improvements */
+@layer utilities {
+  /* Safe area for notched phones (bottom nav) */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* Better touch targets and overflow on small screens */
+@media (max-width: 1023px) {
+  /* Prevent horizontal scroll from wide tables / cards */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Slightly larger tap targets for common buttons */
+  button, [role="button"] {
+    min-height: 2.25rem;
+  }
+
+  /* Make dense tables scroll horizontally instead of breaking layout */
+  .table-scroll {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
